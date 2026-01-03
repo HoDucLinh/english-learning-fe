@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { ENDPOINTS } from "../lib/api";
 
 export default function AddPage() {
   const { data: session } = useSession();
@@ -22,7 +23,7 @@ export default function AddPage() {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:8080/api/vocabularies", {
+      const response = await fetch(ENDPOINTS.VOCABULARIES, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
