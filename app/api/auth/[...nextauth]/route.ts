@@ -16,6 +16,19 @@ const handler = NextAuth({
   pages: {
     signIn: '/login',
   },
+  callbacks: {
+    jwt: async ({ token, account }) => {
+      if (account && account.provider === 'google') {
+        console.log('Google ID Token:', account.id_token)
+        token.idToken = account.id_token
+      }
+      return token
+    },
+    session: async ({ session, token }) => {
+      session.idToken = token.idToken as string
+      return session
+    },
+  },
 })
 
 export { handler as GET, handler as POST }
