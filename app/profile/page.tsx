@@ -1,5 +1,26 @@
 "use client";
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 export default function ProfilePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === 'loading') return; // Still loading
+    if (!session) {
+      router.push('/login');
+    }
+  }, [session, status, router]);
+
+  if (status === 'loading') {
+    return <div className="text-center py-12">Đang tải...</div>;
+  }
+
+  if (!session) {
+    return null; // Will redirect
+  }
   return (
     <>
       <h1 className="text-4xl font-bold text-center mb-12 text-blue-700">Hồ Sơ Cá Nhân</h1>
@@ -9,12 +30,12 @@ export default function ProfilePage() {
         <div className="md:col-span-1 text-center">
           <div className="bg-white p-8 rounded-2xl shadow-xl">
             <img
-              src="/avatar-placeholder.png" // Thay bằng ảnh thật hoặc dùng avatar generator
+              src={session.user?.image || "/avatar-placeholder.png"}
               alt="Avatar"
               className="w-40 h-40 rounded-full mx-auto border-4 border-blue-500 shadow-lg"
             />
-            <h2 className="text-2xl font-bold mt-6">Nguyễn Văn Học</h2>
-            <p className="text-gray-600">hoclai@english.com</p>
+            <h2 className="text-2xl font-bold mt-6">{session.user?.name || "Người dùng"}</h2>
+            <p className="text-gray-600">{session.user?.email}</p>
 
             <div className="mt-8 space-y-4">
               <div className="bg-green-100 text-green-800 px-4 py-3 rounded-lg font-semibold">

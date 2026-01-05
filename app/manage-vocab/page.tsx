@@ -20,6 +20,14 @@ export default function ManageVocabPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingItem, setEditingItem] = useState<VocabItem | null>(null);
   const [editForm, setEditForm] = useState({ word: "", meaning: "", example: "" });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    word: "",
+    meaning: "",
+    example: "",
+  });
+  const [addMessage, setAddMessage] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -125,6 +133,55 @@ export default function ManageVocabPage() {
     }
   };
 
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session?.idToken) {
+      setAddMessage("Bạn cần đăng nhập để thêm từ vựng.");
+      return;
+    }
+    setAddLoading(true);
+    setAddMessage("");
+
+    try {
+      const response = await fetch(ENDPOINTS.VOCABULARIES, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.idToken}`,
+        },
+        body: JSON.stringify(addFormData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAddMessage("Thêm từ vựng thành công!");
+        setAddFormData({ word: "", meaning: "", example: "" });
+        // Refresh list
+        const refreshResponse = await fetch(ENDPOINTS.VOCABULARIES, {
+          headers: {
+            Authorization: `Bearer ${session.idToken}`,
+          },
+        });
+        if (refreshResponse.ok) {
+          const refreshedData: VocabItem[] = await refreshResponse.json();
+          setVocabularies(refreshedData);
+        }
+        setTimeout(() => setIsAddModalOpen(false), 1500);
+      } else {
+        setAddMessage("Lỗi khi thêm từ vựng. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setAddMessage(`Lỗi kết nối: ${error instanceof Error ? error.message : 'Unknown error'}. Vui lòng thử lại.`);
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleAddChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setAddFormData({ ...addFormData, [e.target.name]: e.target.value });
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-8">
@@ -146,12 +203,12 @@ export default function ManageVocabPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
           <h1 className="text-4xl font-bold text-blue-700">Quản Lý Từ Vựng & Ngữ Pháp</h1>
-          <a
-            href="/add"
+          <button
+            onClick={() => setIsAddModalOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg"
           >
             + Thêm Từ Mới
-          </a>
+          </button>
         </div>
 
         {/* Tabs + Thống kê */}
@@ -254,6 +311,124 @@ export default function ManageVocabPage() {
           <div className="text-center py-16 text-gray-500">
             <p className="text-xl">Không tìm thấy kết quả phù hợp 😔</p>
             <p className="mt-2">Thử thay đổi bộ lọc hoặc thêm từ mới!</p>
+          </div>
+        )}
+
+        {/* Add Modal */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-blue-700">Thêm Từ Vựng hoặc Ngữ Pháp Mới</h2>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-10">
+                {/* Form thêm từ */}
+                <div className="bg-white p-8 rounded-2xl shadow-xl">
+                  <form onSubmit={handleAddSubmit} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Từ vựng / Cấu trúc ngữ pháp
+                      </label>
+                      <input
+                        type="text"
+                        name="word"
+                        value={addFormData.word}
+                        onChange={handleAddChange}
+                        placeholder="Ví dụ: Achieve hoặc Present Perfect"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nghĩa tiếng Việt
+                      </label>
+                      <input
+                        type="text"
+                        name="meaning"
+                        value={addFormData.meaning}
+                        onChange={handleAddChange}
+                        placeholder="Ví dụ: Đạt được, Hoàn thành"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phát âm (IPA) - tùy chọn
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="/əˈtʃiːv/"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Câu ví dụ
+                      </label>
+                      <textarea
+                        rows={4}
+                        name="example"
+                        value={addFormData.example}
+                        onChange={handleAddChange}
+                        placeholder="She worked hard to achieve her dreams."
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    {addMessage && (
+                      <p className={`text-sm ${addMessage.includes("thành công") ? "text-green-600" : "text-red-600"}`}>
+                        {addMessage}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={addLoading}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-lg disabled:opacity-50"
+                    >
+                      {addLoading ? "Đang thêm..." : "Thêm Từ & Tạo Flashcard Tự Động"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Preview Flashcard */}
+                <div className="flex flex-col items-center justify-center">
+                  <h3 className="text-2xl font-semibold mb-6 text-gray-800">Preview Flashcard</h3>
+                  <div className="relative w-80 h-96 perspective-1000">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-white p-8 text-center transform transition-all duration-700 hover:rotate-y-180 preserve-3d">
+                      {/* Mặt trước */}
+                      <div className="backface-hidden absolute inset-0 flex flex-col items-center justify-center">
+                        <p className="text-5xl font-bold mb-4">{addFormData.word || "Achieve"}</p>
+                        <p className="text-xl opacity-80">/əˈtʃiːv/</p>
+                        <p className="mt-8 text-lg">Chạm để lật thẻ</p>
+                      </div>
+
+                      {/* Mặt sau */}
+                      <div className="backface-hidden absolute inset-0 rotate-y-180 flex flex-col items-center justify-center">
+                        <p className="text-4xl font-bold mb-6">{addFormData.meaning || "Đạt được"}</p>
+                        <p className="text-lg text-center max-w-xs">
+                          {addFormData.example || "She worked hard to achieve her dreams."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-6 text-sm text-gray-600">Flashcard sẽ được tạo tự động sau khi thêm</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
