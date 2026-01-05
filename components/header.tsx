@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useSession, signIn, signOut } from 'next-auth/react'
+import { useState } from 'react'
+import { searchDictionary, DictionaryEntry } from '../app/lib/api'
 
 export default function Header() {
   const { data: session } = useSession()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResult, setSearchResult] = useState<DictionaryEntry[] | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const navItems = [
     { name: "Trang chủ", href: "/" },
@@ -15,57 +21,124 @@ export default function Header() {
     { name: "Thực hành", href: "/practice" },
   ];
 
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return
+    setIsLoading(true)
+    try {
+      const data = await searchDictionary(searchTerm)
+      setSearchResult(data)
+      setIsModalOpen(true)
+    } catch (error) {
+      alert('Không tìm thấy từ này')
+    }
+    setIsLoading(false)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
+
   return (
-    <header className="bg-blue-600 text-white shadow-md">
-      <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-        <Link href="/" className="text-2xl font-bold">English Learner</Link>
+    <>
+      <header className="bg-blue-600 text-white shadow-md">
+        <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <Link href="/" className="text-2xl font-bold">English Learner</Link>
 
-        <nav className="flex flex-wrap justify-center gap-6">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="hover:underline">
-              {item.name}
-            </Link>
-          ))}
-        </nav>
+          <nav className="flex flex-wrap justify-center gap-6">
+            {navItems.map((item) => (
+              <Link key={item.href} href={item.href} className="hover:underline">
+                {item.name}
+              </Link>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            placeholder="Tìm kiếm từ vựng..."
-            className="px-4 py-2 rounded-lg text-black w-full md:w-64"
-          />
-          {session ? (
-            <div className="relative">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Tìm kiếm từ vựng..."
+                className="px-4 py-2 rounded-lg text-black w-full md:w-64"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={handleKeyPress}
+              />
               <button
-                onClick={() => signOut()}
-                className="flex items-center gap-2 hover:bg-white/10 rounded-lg p-2 transition-colors group"
-                title="Đăng xuất"
+                onClick={handleSearch}
+                disabled={isLoading}
+                className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 disabled:opacity-50"
               >
-                {session.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt="Avatar"
-                    className="w-8 h-8 rounded-full border-2 border-white/20"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-                <svg className="w-5 h-5 text-white hover:text-red-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                {isLoading ? '...' : 'Tìm'}
               </button>
             </div>
-          ) : (
-            <Link href="/login" className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors">
-              Đăng nhập
-            </Link>
-          )}
+            {session ? (
+              <div className="relative">
+                <button
+                  onClick={() => signOut()}
+                  className="flex items-center gap-2 hover:bg-white/10 rounded-lg p-2 transition-colors group"
+                  title="Đăng xuất"
+                >
+                  {session.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="Avatar"
+                      className="w-8 h-8 rounded-full border-2 border-white/20"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  <svg className="w-5 h-5 text-white hover:text-red-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors">
+                Đăng nhập
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {isModalOpen && searchResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">{searchResult[0].word}</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            {searchResult[0].phonetic && (
+              <p className="text-gray-600 mb-4">{searchResult[0].phonetic}</p>
+            )}
+            {searchResult[0].meanings.map((meaning, index) => (
+              <div key={index} className="mb-4">
+                <h3 className="text-lg font-semibold text-blue-600 capitalize">{meaning.partOfSpeech}</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  {meaning.definitions.map((def, defIndex) => (
+                    <li key={defIndex} className="text-gray-700">
+                      {def.definition}
+                      {def.example && (
+                        <span className="block text-gray-500 italic mt-1">Ví dụ: "{def.example}"</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
