@@ -13,7 +13,7 @@ type VocabItem = {
 
 
 export default function ManageVocabPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [vocabularies, setVocabularies] = useState<VocabItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +22,10 @@ export default function ManageVocabPage() {
   const [editForm, setEditForm] = useState({ word: "", meaning: "", example: "" });
 
   useEffect(() => {
+    if (status === 'loading') return;
+
     const fetchVocabularies = async () => {
-      if (!session?.idToken) {
+      if (status !== 'authenticated' || !session?.idToken) {
         setError("Bạn cần đăng nhập để xem từ vựng.");
         setLoading(false);
         return;
@@ -51,7 +53,7 @@ export default function ManageVocabPage() {
     };
 
     fetchVocabularies();
-  }, [session]);
+  }, [session, status]);
 
   // Lọc dữ liệu theo tìm kiếm (vì không có type và progress nữa)
   const filteredData = vocabularies.filter((item) => {

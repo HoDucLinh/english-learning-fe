@@ -18,9 +18,12 @@ const handler = NextAuth({
   },
   callbacks: {
     jwt: async ({ token, account }) => {
-      if (account && account.provider === 'google') {
-        console.log('Google ID Token:', account.id_token)
-        token.idToken = account.id_token
+      if (account) {
+        if (account.provider === 'google') {
+          token.idToken = account.id_token
+        } else if (account.provider === 'github') {
+          token.idToken = account.access_token
+        }
       }
       return token
     },
